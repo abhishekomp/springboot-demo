@@ -1,0 +1,40 @@
+Prioritized questions to investigate:
+- For get Single todo by id, how to handle if the sent id is not a string that can be converted to Long?
+- For the get all todos endpoint, should we return the total count of todos along with the list?
+- For create todo, should we validate the input data (e.g., title and description) before creating a new todo item?
+
+
+
+
+List of questions to investigate:
+- For update todo, should we allow partial updates (e.g., only updating the title or description)?
+- Should we implement pagination for the get all todos endpoint to handle large datasets?
+- How should we handle concurrency issues when multiple users try to update the same todo item simultaneously?
+- Should we add user authentication and authorization to restrict access to certain endpoints?
+- For the delete todo endpoint, should we implement a soft delete (marking as deleted) instead of a hard delete (removing from the database)?
+- Should we add timestamps (created_at, updated_at) to the todo items for better tracking?
+- How should we handle validation for the todo fields (e.g., title length, description length)?
+- Should we implement logging for API requests and responses for better monitoring and debugging?
+- For the get all todos endpoint, should we allow filtering by certain criteria (e.g., completed status, date range)?
+- Should we implement rate limiting to prevent abuse of the API?
+- How should we handle internationalization and localization for the todo items (e.g., different languages)?
+- Should we add a priority field to the todo items to indicate their importance?
+- For the update todo endpoint, should we return the updated todo item in the response?
+- Should we implement a search functionality to find todos based on keywords in the title or description?
+- How should we handle large payloads when creating or updating todos (e.g., very long descriptions)?
+- Should we add a feature to mark todos as completed or not completed?
+- For the get single todo by id endpoint, should we return a 404 status code if the todo is not found?
+- Should we implement a feature to categorize todos (e.g., work, personal)?
+- How should we handle database connection issues or downtime in the API?
+- Should we add unit and integration tests for the API endpoints to ensure reliability?
+- For the create todo endpoint, should we return the created todo item in the response along with a 201 status code?
+- Should we implement a feature to attach files or images to todo items?
+- How should we handle versioning of the API to ensure backward compatibility with future changes?
+- Should we add a feature to set reminders or due dates for todo items?
+
+- Should we implement a feature to share todos with other users?
+- How should we handle data serialization and deserialization for the todo items (e.g., using JSON or XML)?
+- Should we add a feature to export todos to different formats (e.g., CSV, PDF)?
+- For the update todo endpoint, should we implement optimistic locking to prevent overwriting changes made by other users?
+- Should we implement a feature to archive completed todos instead of deleting them?
+- How should we handle time zones when dealing with timestamps for todo items?
