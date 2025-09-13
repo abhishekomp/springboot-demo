@@ -1,0 +1,49 @@
+# Maven build directories (all subprojects)
+**/target/
+
+# Maven dependency-reduced POMs (shade, etc.)
+**/dependency-reduced-pom.xml
+
+# Logs
+*.log
+
+# Compiled class files (rare if using target/, but safe)
+**/*.class
+
+# IDE files (IntelliJ IDEA, Eclipse, VS Code, NetBeans)
+# IntelliJ
+.idea/
+**/*.iml
+*.iws
+*.ipr
+# Eclipse
+.project
+.classpath
+.settings/
+# VS Code
+.vscode/
+# NetBeans
+.nb-configuration/
+.nb-gradle/
+
+# MacOS system files
+.DS_Store
+**/.DS_Store
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Other OS-specific swap and temporary files
+*~
+*.swp
+.svn/
+
+# Node/npm junk (if you ever add UI/tests/etc)
+node_modules/
+
+# Optional: ignore generated JARs/WARs/EARs globally for all subprojects
+*.jar
+*.war
+*.ear
