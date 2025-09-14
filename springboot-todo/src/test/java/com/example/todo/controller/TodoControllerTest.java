@@ -1,5 +1,6 @@
 package com.example.todo.controller;
 
+import com.example.todo.dto.TodoListResponse;
 import com.example.todo.dto.TodoRequest;
 import com.example.todo.dto.TodoResponse;
 import com.example.todo.service.TodoService;
@@ -45,8 +46,10 @@ class TodoControllerTest {
         // Prepare the response from the service layer
         TodoResponse response = new TodoResponse(1L, "Test To-Do", "This is a test to-do item.");
         TodoResponse response2 = new TodoResponse(2L, "Another To-Do", "This is another test to-do item.");
+        // Create an instance of TodoListResponse
+        TodoListResponse listResponse = new TodoListResponse(2, List.of(response,response2));
         // Service layer mock using BDD style
-        given(todoService.getAll()).willReturn(List.of(response, response2));
+        given(todoService.getAll()).willReturn(listResponse);
         // Act & Assert
         mockMvc.perform(get("/api/todos/all")
                         .header("x-client-id", "valid-client-id")
@@ -55,14 +58,31 @@ class TodoControllerTest {
                 .andExpect(content().contentType("application/json"))
                 .andExpect(header().exists("X-Processed-By"))
                 .andExpect(header().string("X-Processed-By", "TodoController"))
-                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.count").value(2)) // Ensure the count is correct (adapted to the new return type from service)
+                .andExpect(jsonPath("$.items").isArray()) // Ensure items is a JSON array
+                .andExpect(jsonPath("$.items.length()").value(2))
+                .andExpect(jsonPath("$.items[0].id").value(1))
+                .andExpect(jsonPath("$.items[0].title").value("Test To-Do"))
+                .andExpect(jsonPath("$.items[0].description").value("This is a test to-do item."))
+                .andExpect(jsonPath("$.items[1].id").value(2))
+                .andExpect(jsonPath("$.items[1].title").value("Another To-Do"))
+                .andExpect(jsonPath("$.items[1].description").value("This is another test to-do item."));
+
+        /*mockMvc.perform(get("/api/todos/all")
+                        .header("x-client-id", "valid-client-id")
+                        .header("x-request-id", "valid-request-id"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json"))
+                .andExpect(header().exists("X-Processed-By"))
+                .andExpect(header().string("X-Processed-By", "TodoController"))
+                .andExpect(jsonPath("$").isArray()) // Ensure the response is a JSON array
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].title").value("Test To-Do"))
                 .andExpect(jsonPath("$[0].description").value("This is a test to-do item."))
                 .andExpect(jsonPath("$[1].id").value(2))
                 .andExpect(jsonPath("$[1].title").value("Another To-Do"))
-                .andExpect(jsonPath("$[1].description").value("This is another test to-do item."));
+                .andExpect(jsonPath("$[1].description").value("This is another test to-do item."));*/
     }
 
     // Negative Test case: Get All To-Dos missing required headers (getting all todos)

@@ -1,10 +1,11 @@
 package com.example.todo.controller;
 
+import com.example.todo.dto.TodoListResponse;
 import com.example.todo.dto.TodoRequest;
 import com.example.todo.dto.TodoResponse;
 import com.example.todo.exception.ApiErrorResponse;
-import com.example.todo.service.TodoService;
 import com.example.todo.exception.ResourceNotFoundException;
+import com.example.todo.service.TodoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -20,7 +21,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -82,7 +82,11 @@ public class TodoController {
             )
     })
     @GetMapping("/all")
-    public ResponseEntity<List<TodoResponse>> getAllTodos(
+    public ResponseEntity<TodoListResponse> getAllTodos(
+            // The @Parameter annotation is used to document the headers in Swagger UI but there is a gotcha. Spring lowercases all header names in the map, so you must use lowercase keys (x-client-id, x-request-id)
+            // It won't work if you are using map
+            // You should use @RequestHeader("X-Client-Id") String clientId, @RequestHeader("X-Request-Id") String requestId instead
+            // Check my getTodoById method for example where I used individual headers and it works fine in Swagger UI
             @Parameter(description = "Request headers", required = true, in = ParameterIn.HEADER, example = "X-Client-Id: 12345, X-Request-Id: abcde")
             @RequestHeader Map<String, String> headers
     ) {
@@ -108,12 +112,19 @@ public class TodoController {
         }*/
 
         // Proceed with normal processing
-        List<TodoResponse> todoResponseList = service.getAll();
+        TodoListResponse listResponse = service.getAll();
+
+        // Log the count of todos retrieved from the service layer
+        logger.info("Total To-Do items retrieved: {}", listResponse.getCount());
+        logger.trace("[TRACE] Response from service layer: {}", listResponse);
+
         // Add custom header in response
+        // debug log the addition of custom header
+        logger.debug("Adding custom response header X-Processed-By: TodoController");
         HttpHeaders responseHeaders = new HttpHeaders();
         responseHeaders.add("X-Processed-By",  "TodoController");
         // Return response with 200 OK, body and custom header
-        return new ResponseEntity<>(todoResponseList, responseHeaders, HttpStatus.OK);
+        return new ResponseEntity<>(listResponse, responseHeaders, HttpStatus.OK);
         //return ResponseEntity.ok().body(todos);
     }
 

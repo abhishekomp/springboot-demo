@@ -1,5 +1,6 @@
 package com.example.todo.service;
 
+import com.example.todo.dto.TodoListResponse;
 import com.example.todo.dto.TodoRequest;
 import com.example.todo.dto.TodoResponse;
 import com.example.todo.model.TodoEntity;
@@ -30,17 +31,21 @@ public class TodoServiceImpl implements TodoService {
      * @return List of TodoResponse
      */
     @Override
-    public List<TodoResponse> getAll() {
+    public TodoListResponse getAll() {
         logger.info("Fetching all To-Do items");
         // For simplicity, returning a single dummy entity in a list if repository is empty
         if (repository.count() == 0) {
             logger.warn("No To-Do items found, returning a default item");
             // Create a default To-Do item when none exist in the repository
-            return List.of(new TodoResponse(1L, "Default To-Do", "This is a default To-Do item."));
+            //return List.of(new TodoResponse(1L, "Default To-Do", "This is a default To-Do item."));
+            return new TodoListResponse(1, List.of(new TodoResponse(1L, "Default To-Do", "This is a default To-Do item.")));
         }
         List<TodoEntity> entities = repository.findAll();
         // Stream and map to TodoResponse
-        return entities.stream().map(this::toResponse).toList();
+        //return entities.stream().map(this::toResponse).toList();
+        // Return count and list in a response object
+        List<TodoResponse> responses = entities.stream().map(this::toResponse).toList();
+        return new TodoListResponse(responses.size(), responses);
     }
 
     // Fetch by ID
