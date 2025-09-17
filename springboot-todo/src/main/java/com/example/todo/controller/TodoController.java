@@ -13,8 +13,15 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.constraints.Min;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +51,13 @@ public class TodoController {
     private final TodoService service;
 
     public TodoController(TodoService service) { this.service = service; }
+
+    // Simple health check endpoint
+    @GetMapping("/health")
+    public ResponseEntity<String> healthCheck() {
+        logger.info("Health check endpoint invoked");
+        return ResponseEntity.ok("Todo API is up and running!");
+    }
 
     // GET all todos
     @Operation(summary = "Fetch all To-Do items with mandatory headers",
@@ -126,6 +140,163 @@ public class TodoController {
         // Return response with 200 OK, body and custom header
         return new ResponseEntity<>(listResponse, responseHeaders, HttpStatus.OK);
         //return ResponseEntity.ok().body(todos);
+    }
+
+    // Pagination support in a new endpoint
+    // Example: /api/todos/paginated?page=0&size=5
+    // Example: /api/todos/paginated?page=1&size=20&sort=createdAt,desc
+    // http://localhost:8081/api/todos/paginated?page=1&size=10&sort=id,desc
+    // Pageable is an interface provided by Spring Data to encapsulate pagination parameters
+    // @PageableDefault sets default page number and size if not provided in request
+    // @SortDefault sets default sorting if not provided in request
+    // Note: Page number is 0-based index, so page=0 is the first page
+    // The response is a Page<TodoResponse> which contains the list of items for the requested page
+    // along with pagination metadata like total items, total pages, current page, etc.
+    // This is more efficient for large datasets as we are not loading all items into memory
+    // and only fetching the required page from the database
+    // You can call /api/todos?page=0&size=5 to get first 5 todos
+    // Default page=0 and size=10 if not provided
+    // You can also call /api/todos?page=1&size=5 to get next 5 todos and so on
+    // This is a simple implementation, for large datasets consider using database-level pagination
+    // This endpoint is not documented in Swagger for brevity
+    // Consider Page<TodoResponse> as List<TodoResponse> with additional pagination metadata.
+    @GetMapping("/paginated")
+    public ResponseEntity<Page<TodoResponse>> getTodos(
+            @Parameter(description = "Request headers", required = true, in = ParameterIn.HEADER, example = "X-Client-Id: 12345")
+            @RequestHeader("X-Client-Id") String clientId,
+            @Parameter(description = "Request header", required = true, in = ParameterIn.HEADER, example = "X-Request-Id: abcde")
+            @RequestHeader("X-Request-Id") String requestId,
+            @Parameter(description = "Page number for pagination (0-based)", example = "0")
+            @PageableDefault(page = 0, size = 10)
+                    @SortDefault.SortDefaults({
+                            @SortDefault(sort = "id", direction = org.springframework.data.domain.Sort.Direction.ASC)
+                    })
+            Pageable pageable
+    ){
+        logger.info("GET /api/todos/paginated invoked with pagination page={}, size={}", pageable.getPageNumber(), pageable.getPageSize());
+        // Validate required headers
+        if( clientId == null || clientId.isBlank()) {
+            logger.error("Missing required header: X-Client-Id");
+            throw new IllegalArgumentException("Missing required header: X-Client-Id");
+        }
+        if( requestId == null || requestId.isBlank()) {
+            logger.error("Missing required header: X-Request-Id");
+            throw new IllegalArgumentException("Missing required header: X-Request-Id");
+        }
+        logger.info("Required headers present: X-Client-Id={}, X-Request-Id={}", clientId, requestId);
+
+        // Proceed with normal processing to fetch paginated todos
+        Page<TodoResponse> responsePage = service.getAll(pageable);
+
+        // Log the count of todos retrieved from the service layer
+        logger.info("Paginated To-Do items retrieved: {}", responsePage.getTotalElements());
+        logger.trace("[TRACE] Paginated response: {}", responsePage);
+
+        // Add custom header in response
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.add("X-Processed-By",  "TodoController");
+        // Add pagination metadata headers
+        responseHeaders.add("X-Total-Count", String.valueOf(responsePage.getTotalElements()));
+        responseHeaders.add("X-Total-Pages", String.valueOf(responsePage.getTotalPages()));
+        responseHeaders.add("X-Current-Page", String.valueOf(responsePage.getNumber()));
+        responseHeaders.add("X-Page-Size", String.valueOf(responsePage.getSize()));
+        // Return response with 200 OK, body and custom header
+        return new ResponseEntity<>(responsePage, responseHeaders, HttpStatus.OK);
+        //return ResponseEntity.ok().body(responsePage);
+    }
+
+    // Improved pagination endpoint with explicit page and size params to validate the page and size.
+    // This gives more control over validation and default values
+    // Example: /api/todos/paginatedV2?page=0&size=5
+    // Example: /api/todos/paginatedV2?page=1&size=20
+    // http://localhost:8081/api/todos/paginatedV2?page=1&size=10
+    // We cannot validate page value if we use Pageable directly as it defaults to page=0 if not provided or if the value is negative.
+    // Hence, we are explicitly getting page and size as request params with validation. Now we can set @Min(0) for page and @Min(1) for size.
+    // If client sends a negative page value, Spring will throw 400 Bad Request with validation error message. The actual Exception is MethodArgumentNotValidException which we can handle globally in @RestControllerAdvice.
+    // This endpoint is documented in Swagger with detailed response headers for pagination metadata.
+    // Note: Page number is 0-based index, so page=0 is the first page
+    // The response is a Page<TodoResponse> which contains the list of items for the requested page
+    // along with pagination metadata like total items, total pages, current page, etc.
+    // This is more efficient for large datasets as we are not loading all items into memory
+    // and only fetching the required page from the database.
+    @Operation(summary = "Fetch paginated To-Do items with mandatory headers and explicit pagination parameters",
+            description = "Requires X-Client-Id and X-Request-Id headers. Use page (0-based) and size query parameters for pagination.")
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully retrieved paginated list",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TodoResponse.class)
+                    ),
+                    headers = {
+                            @io.swagger.v3.oas.annotations.headers.Header(
+                                    name = "X-Processed-By",
+                                    description = "Indicates which controller processed the request",
+                                    schema = @Schema(type = "string")
+                            ),
+                            @io.swagger.v3.oas.annotations.headers.Header(
+                                    name = "X-Total-Count",
+                                    description = "Total number of To-Do items",
+                                    schema = @Schema(type = "integer")
+                            ),
+                            @io.swagger.v3.oas.annotations.headers.Header(
+                                    name = "X-Total-Pages",
+                                    description = "Total number of pages available",
+                                    schema = @Schema(type = "integer")
+                            ),
+                            @io.swagger.v3.oas.annotations.headers.Header(
+                                    name = "X-Current-Page",
+                                    description = "Current page number (0-based)",
+                                    schema = @Schema(type = "integer")
+                            ),
+                            @io.swagger.v3.oas.annotations.headers.Header(
+                                    name = "X-Page-Size",
+                                    description = "Number of items per page",
+                                    schema = @Schema(type = "integer")
+                            )
+                    }
+            )
+    }
+    )
+    @GetMapping("/paginatedV2")
+    public ResponseEntity<Page<TodoResponse>> getTodos(
+            @RequestHeader("X-Client-Id") String clientId,      // Required header, if you want optional, set required=false
+            @RequestHeader("X-Request-Id") String requestId,    // Required header, Spring will throw 400 Bad Request if missing
+            // Explicitly get page and size as request params with validation
+            // This gives more control over validation and default values
+            @RequestParam("page") @Min(0) int page,
+            @RequestParam("size") @Min(1) int size
+    ) {
+        // info log the invocation
+        logger.info("GET /api/todos/paginatedV2 invoked with page={}, size={}", page, size);
+        // Validate required headers
+        if( clientId == null || clientId.isBlank()) {
+            logger.error("Missing required header: X-Client-Id");
+            throw new IllegalArgumentException("Missing required header: X-Client-Id");
+        }
+        if( requestId == null || requestId.isBlank()) {
+            logger.error("Missing required header: X-Request-Id");
+            throw new IllegalArgumentException("Missing required header: X-Request-Id");
+        }
+        logger.info("Required headers present: X-Client-Id={}, X-Request-Id={}", clientId, requestId);
+
+        // Create Pageable object manually using PageRequest.of by using the client provided page and size
+        // This gives more control over pagination parameters
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        Page<TodoResponse> responsePage = service.getAll(pageable);
+
+        // Add custom header in response
+        HttpHeaders responseHeaders = new HttpHeaders();
+        responseHeaders.add("X-Processed-By",  "TodoController");
+        // Add pagination metadata headers
+        responseHeaders.add("X-Total-Count", String.valueOf(responsePage.getTotalElements()));
+        responseHeaders.add("X-Total-Pages", String.valueOf(responsePage.getTotalPages()));
+        responseHeaders.add("X-Current-Page", String.valueOf(responsePage.getNumber()));
+        responseHeaders.add("X-Page-Size", String.valueOf(responsePage.getSize()));
+        // Return response with 200 OK, body and custom header
+        return new ResponseEntity<>(responsePage, responseHeaders, HttpStatus.OK);
+        // ... rest of your code
     }
 
     // GET todo by id

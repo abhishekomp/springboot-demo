@@ -7,6 +7,8 @@ import com.example.todo.model.TodoEntity;
 import com.example.todo.repository.TodoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -34,18 +36,29 @@ public class TodoServiceImpl implements TodoService {
     public TodoListResponse getAll() {
         logger.info("Fetching all To-Do items");
         // For simplicity, returning a single dummy entity in a list if repository is empty
-        if (repository.count() == 0) {
+        /*if (repository.count() == 0) {
             logger.warn("No To-Do items found, returning a default item");
             // Create a default To-Do item when none exist in the repository
             //return List.of(new TodoResponse(1L, "Default To-Do", "This is a default To-Do item."));
             return new TodoListResponse(1, List.of(new TodoResponse(1L, "Default To-Do", "This is a default To-Do item.")));
-        }
+        }*/
         List<TodoEntity> entities = repository.findAll();
         // Stream and map to TodoResponse
         //return entities.stream().map(this::toResponse).toList();
         // Return count and list in a response object
         List<TodoResponse> responses = entities.stream().map(this::toResponse).toList();
         return new TodoListResponse(responses.size(), responses);
+    }
+
+    /** Fetch paginated To-Do items
+     * @param pageable Pageable object containing page number and size
+     * @return Page of TodoResponse
+     */
+    @Override
+    public Page<TodoResponse> getAll(Pageable pageable) {
+        logger.info("Fetching paginated To-Do items, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+        Page<TodoEntity> page = repository.findAll(pageable);
+        return page.map(this::toResponse);
     }
 
     // Fetch by ID

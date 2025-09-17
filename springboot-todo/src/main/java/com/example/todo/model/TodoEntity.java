@@ -25,4 +25,9 @@ public class TodoEntity {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    @Override
+    public String toString() {
+        return String.format("TodoEntity{id=%d, title='%s', description='%s'}", id, title, description);
+    }
 }

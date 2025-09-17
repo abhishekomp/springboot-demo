@@ -442,4 +442,114 @@ If you’re adding authentication, paginated responses, file uploads, or richer 
 
 ---
 
+## Some more information
+- Both Hamcrest and AssertJ come bundled with Spring Boot’s standard testing starter ```spring-boot-starter-test```
+
+---
+# Pagination test scenarios
+Here are useful test scenarios for pagination, with a brief description for each:
+
+**Positive Scenarios:**
+- `testGetFirstPageWithDefaultSize`: Verifies that the first page returns the expected number of items and correct metadata.
+- `testGetMiddlePage`: Checks that a middle page returns the correct subset of items and accurate pagination info.
+- `testGetLastPage`: Ensures the last page contains the remaining items and correct page metadata.
+- `testCustomPageSize`: Validates that changing the page size returns the correct number of items per page.
+- `testSortedResults`: Confirms that items are sorted as requested (e\.g\., by title or id).
+
+**Negative Scenarios:**
+- `testPageOutOfBounds`: Verifies that requesting a page beyond the last returns an empty list or appropriate error.
+- `testNegativePageNumber`: Checks that a negative page number returns a validation error or default to first page.
+- `testZeroOrNegativePageSize`: Ensures that zero or negative page size returns a validation error.
+- `testMissingRequiredHeaders`: Validates that missing required headers (e\.g\., X\-Client\-Id) results in a 400 or 401 error.
+- `testInvalidSortParameter`: Checks that an invalid sort parameter returns a validation error.
+
+Each test should assert both the content and the pagination metadata \(totalElements, totalPages, pageNumber, pageSize\)\.
+
+To improve test method names in your `TodoControllerTest` class, use descriptive, behavior-driven names that clearly state what each test verifies.  
+A good pattern is: `should_<expected_behavior>_when_<condition>`.
+
+For example:
+- `shouldReturnPaginatedTodos_whenValidRequest`
+- `shouldReturnError_whenMissingRequiredHeaders`
+- `shouldCreateTodo_whenValidInput`
+- `shouldReturnNotFound_whenTodoDoesNotExist`
+- `shouldReturnAllTodos_whenGetAllInvoked`
+- `shouldReturnBadRequest_whenInvalidTodoData`
+
+This approach makes each test’s purpose clear and helps future maintainers quickly understand what is being tested.  
+Rename your methods to follow this pattern, reflecting the actual scenario and expected outcome for each test.
+---
+
+# Magic of Pagination. Using Page.map() with DTO Conversion in Spring Data JPA Pagination
+
+## **Why Convert Entities to DTOs?**
+
+In a Spring Boot project, the entities (like `TodoEntity`) are mapped directly to your database tables.  
+However, when presenting paginated results to clients, it’s best practice to serve **DTOs** (Data Transfer Objects, e.g., `TodoResponse`) to encapsulate, format, or reshape the payload for your API.
+
+---
+
+## **How Does `Page.map()` Work?**
+
+`Page<TodoEntity>` has a convenient `.map(Function<T, U>)` method that:
+
+- Applies a conversion to every item in the page’s content list (**e.g., converts `TodoEntity` to `TodoResponse`**)
+- Returns a new page of the converted type (`Page<TodoResponse>`), preserving all pagination metadata (page number, size, total elements, etc.)
+
+---
+
+## **Example Usage**
+
+```java
+// Service layer method
+@Override
+public Page<TodoResponse> getAll(Pageable pageable) {
+    logger.info("Fetching paginated To-Do items, page: {}, size: {}", pageable.getPageNumber(), pageable.getPageSize());
+    Page<TodoEntity> page = repository.findAll(pageable);    // Fetch paged entities
+    return page.map(this::toResponse);                       // Map to paged DTOs
+}
+
+// DTO conversion method
+private TodoResponse toResponse(TodoEntity entity) {
+    return new TodoResponse(entity.getId(), entity.getTitle(), entity.getDescription());
+}
+```
+- The `toResponse` function converts a single entity to its DTO.
+- The `map` method applies that function across all entities in the page.
+
+---
+
+## **How Pagination Metadata Is Preserved**
+
+After mapping, properties like these remain unchanged:
+
+- `page.getNumber()`        // Page index
+- `page.getSize()`          // Page size
+- `page.getTotalElements()` // Total items in dataset
+- ... and others (`first`, `last`, `empty`, etc.)
+
+---
+
+## **Summary Table: Converting Pages**
+
+| Step                                 | Result                                                     |
+|---------------------------------------|------------------------------------------------------------|
+| Fetch with `repository.findAll()`     | Returns `Page<TodoEntity>`                                 |
+| Call `.map(this::toResponse)`         | Converts page content to DTOs; keeps all metadata intact   |
+| Send from controller                  | Client gets paginated DTOs with accurate metadata          |
+
+---
+
+## **Key Takeaway**
+
+- Use `page.map(this::toResponse)` to convert paged entities to paged DTOs without manual loops.
+- The paging metadata (number, size, sorting, etc.) is automatically preserved for the client.
+- The DTO conversion (`toResponse`) needs to know only about a single entity.
+
+---
+
+**Reference this in your project to help team members understand clean DTO transformation for pagination responses!**
+
+---
+
 **Happy documentation!**

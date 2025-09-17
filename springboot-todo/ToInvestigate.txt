@@ -1,14 +1,35 @@
 Prioritized questions to investigate:
-- For get Single todo by id, how to handle if the sent id is not a string that can be converted to Long?
+- Should we implement pagination for the get all todos endpoint to handle large datasets?
+- For get Single todo by id, how to handle if the sent id is a string that cannot be converted to an integer?
+- For the delete todo endpoint, should we return a 204 No Content status code or a 200 OK with a message?
+- Should we implement input sanitization to prevent SQL injection or other security vulnerabilities?
+- For the update todo endpoint, should we return the updated todo item in the response?
 - For the get all todos endpoint, should we return the total count of todos along with the list?
+Implemented in the code and updated the test case as well.
 - For create todo, should we validate the input data (e.g., title and description) before creating a new todo item?
 
+Pagination test scenarios to consider:
+Here are useful test scenarios for pagination, with a brief description for each:
 
+**Positive Scenarios:**
+- `testGetFirstPageWithDefaultSize`: Verifies that the first page returns the expected number of items and correct metadata.
+- `testGetMiddlePage`: Checks that a middle page returns the correct subset of items and accurate pagination info.
+- `testGetLastPage`: Ensures the last page contains the remaining items and correct page metadata.
+- `testCustomPageSize`: Validates that changing the page size returns the correct number of items per page.
+- `testSortedResults`: Confirms that items are sorted as requested (e\.g\., by title or id).
+
+**Negative Scenarios:**
+- `testPageOutOfBounds`: Verifies that requesting a page beyond the last returns an empty list or appropriate error.
+- `testNegativePageNumber`: Checks that a negative page number returns a validation error or default to first page.
+- `testZeroOrNegativePageSize`: Ensures that zero or negative page size returns a validation error.
+- `testMissingRequiredHeaders`: Validates that missing required headers (e\.g\., X\-Client\-Id) results in a 400 or 401 error.
+- `testInvalidSortParameter`: Checks that an invalid sort parameter returns a validation error.
+
+Each test should assert both the content and the pagination metadata \(totalElements, totalPages, pageNumber, pageSize\)\.
 
 
 List of questions to investigate:
 - For update todo, should we allow partial updates (e.g., only updating the title or description)?
-- Should we implement pagination for the get all todos endpoint to handle large datasets?
 - How should we handle concurrency issues when multiple users try to update the same todo item simultaneously?
 - Should we add user authentication and authorization to restrict access to certain endpoints?
 - For the delete todo endpoint, should we implement a soft delete (marking as deleted) instead of a hard delete (removing from the database)?
