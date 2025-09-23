@@ -6,19 +6,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.util.Random;
 
 @Component
+@Profile("dev") // Optional: only runs on 'dev' profile (omit if you want always)
 public class TodoDataSeeder implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(TodoDataSeeder.class);
     private final TodoRepository todoRepository;
 
-    @Value("${app.initial-todo-count:5}")
+    @Value("${app.initial-todo-count:12}") // default to 12 if not set
     private int seedCount;
+
+    private final int MAX_TODOS = 12; // max 12 demo todos available
 
     public TodoDataSeeder(TodoRepository todoRepository) {
         this.todoRepository = todoRepository;
@@ -31,11 +35,11 @@ public class TodoDataSeeder implements CommandLineRunner {
             return;
         }
 
-        int count = Math.max(1, Math.min(seedCount, 12));
+        int count = Math.max(1, Math.min(seedCount, MAX_TODOS)); // ensure between 1 and MAX_TODOS
         logger.info("Seeding {} demo todos...", count);
 
         // Example pool of fake user IDs
-        long[] userIds = {101L, 102L, 103L, 104L, 105L};
+        long[] userIds = {101L, 102L, 103L, 104L, 105L, 106L};
         Random rand = new Random();
 
         for (int i = 1; i <= count; i++) {

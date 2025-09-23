@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender with colored output using ANSI codes. -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!--
+                By default, Spring Boot's logging pattern for colors is:
+                %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(${PID}){magenta} ...
+             -->
+            <pattern>
+                %clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint}
+                %clr(%-5level)
+                %clr(%logger{36}){cyan}
+                %clr(:){faint}
+                %msg%n%throwable
+            </pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Set the log level for the package of interest to DEBUG -->
+    <logger name="com.example.winttodo.exception" level="DEBUG" />
+
+    <!-- Optionally, raise global log level to WARN to reduce noise from other packages -->
+    <root level="WARN">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

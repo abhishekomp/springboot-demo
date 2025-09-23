@@ -4,27 +4,29 @@ import com.example.winttodo.dto.TodoRequest;
 import com.example.winttodo.dto.TodoResponse;
 import com.example.winttodo.service.TodoService;
 import com.example.winttodo.service.TodoServiceImpl;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.time.LocalDate;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TodoController.class)
 //@TestPropertySource(properties = "server.servlet.context-path=/wint")   // Set context path for testing if you do not have application.properties in src/test/resources otherwise you will face issues with Location Header in the response.
 class TodoControllerTest {
+
+    private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     MockMvc mockMvc;
@@ -45,7 +47,7 @@ class TodoControllerTest {
     // Scenario: Valid body and valid headers
     // Expected: Return TodoResponse with status 201 Created
     @Test
-    void should_returnTodoResponse_whenValidBodyAndValidHeaders() throws Exception {
+    void should_returnTodoResponse_whenValidBodyAndValidHeadersForCreateTodoIsUsed() throws Exception {
         // Create the request json body and the expected response
         String requestBody = """
                 {
@@ -86,6 +88,7 @@ class TodoControllerTest {
                         .header("X-Client-Id", "test-client-id")
                         .contentType("application/json")
                         .content(requestBody))
+                        .andDo(print()) // <-- THIS logs request and response to the console (System.out)
                 .andExpect(status().isCreated())    // Assert status 201 Created
                 .andExpect(content().contentType("application/json"))
                 .andExpect(header().exists("X-Processed-By"))
@@ -142,6 +145,7 @@ class TodoControllerTest {
                                     "history": null
                                 }
                                 """))
+                        .andDo(print())
                 .andExpect(status().isCreated())    // Assert status 201 Created
                 .andExpect(content().contentType("application/json"))
                 .andExpect(header().exists("X-Processed-By"))
@@ -252,5 +256,55 @@ class TodoControllerTest {
                 .andExpect(jsonPath("$.errors", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Title is mandatory")))) // Check for title error substring
                 .andExpect(jsonPath("$.errors", org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Due date must not be in the past")))) // Check for due date error substring
                 .andExpect(jsonPath("$.path").value("/wint/api/todos"));
+    }
+
+    // This test is just to verify that we are able to write the logs and json payload is pretty printed on the console and in the file if file logging is enabled.
+    // It does not assert anything, just prints the logs to the console.
+    @Test
+    void should_printPrettyJsonInLogs_whenCreatingTodo() throws Exception {
+        // Create the request json body and the expected response
+        String requestBody = """
+                {
+                    "title": "Test Title for Logging",
+                    "description": "Test Description for Logging",
+                    "dueDate": "2026-10-15"
+                }
+                """;
+        // Create a TodoResponse that will be returned by the mocked service
+        TodoResponse todoResponse = new TodoResponse();
+        todoResponse.setId(3L);
+        todoResponse.setTitle("Test Title for Logging");
+        todoResponse.setDescription("Test Description for Logging");
+        todoResponse.setDueDate(LocalDate.of(2026, 10, 15));
+        // Service Mocking using BDD style
+        given(todoService.createTodo(any(TodoRequest.class))).willReturn(todoResponse);
+        // Act & Assert
+        // Use mockMvc to perform a POST request and assert the response
+        MvcResult mvcResult = mockMvc.perform(post("/wint/api/todos")
+                        .contextPath("/wint") // Set context path for testing if you do not have application.properties in src/test/resources otherwise you will face issues with Location Header in the response.
+                        // Add headers and body
+                        .header("X-Request-Id", "test-request-id-3")
+                        .header("X-Client-Id", "test-client-id-3")
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andReturn();
+
+        // Assert status 201 Created
+        // We are not using andExpect here because we just want to log the request and response
+        assertThat(mvcResult.getResponse().getStatus()).isEqualTo(201);
+
+        // We will use the mvcResult to log the request and response using our utility method
+        logger.info("==== Request ====");
+        logger.info("POST /api/todos");
+        logger.info("Headers: Content-Type=application/json");
+        logger.info("Body: {}", requestBody);
+
+        logger.info("==== Response ====");
+        logger.info("Status: {}", mvcResult.getResponse().getStatus());
+        logger.info("Headers: {}", mvcResult.getResponse().getHeaderNames()
+                .stream()
+                .map(name -> name + "=" + mvcResult.getResponse().getHeader(name))
+                .toList());
+        logger.info("Body: {}", mvcResult.getResponse().getContentAsString());
     }
 }

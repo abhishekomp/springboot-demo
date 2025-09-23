@@ -3,9 +3,14 @@ package com.example.winttodo.controller;
 import com.example.winttodo.dto.TodoRequest;
 import com.example.winttodo.dto.TodoResponse;
 import com.example.winttodo.service.TodoService;
+import com.example.winttodo.utils.LogUtils;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -84,6 +89,38 @@ public class TodoController {
                 .created(location)  // sets status 201 Created + Location header
                 .headers(headers)   // Add custom header
                 .body(todoResponse);
+    }
+
+    // Pagination endpoint
+    @GetMapping()
+    ResponseEntity<Page<TodoResponse>> getAllTodos(
+            @RequestHeader ("X-Request-Id") String requestId,
+            @RequestHeader ("X-Client-Id") String clientId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "10") int size
+    ) {
+        // Log method entry with headers and query params
+        /*logger.info("Entering {}.{}",
+                this.getClass().getSimpleName(),
+                Thread.currentThread().getStackTrace()[1].getMethodName()
+        );*/
+        LogUtils.logMethodEntry(logger, this);
+        // validate headers (basic validation)
+        validateHeaders(requestId, clientId);
+
+        // Create Pageable object using PageRequest.of(page, size)
+        logger.info("Fetching todos - page: {}, size: {}", page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+
+        // Call service to get paginated todos
+        Page<TodoResponse> todoPage = todoService.getAll(pageable);
+        logger.info("Fetched {} todos on page {}", todoPage.getNumberOfElements(), todoPage.getNumber());
+
+        return ResponseEntity.ok()
+                .header("X-Processed-By", "TodoController")
+                .body(todoPage);
+        //return ResponseEntity.ok(todoService.getAll(pageable));
+
     }
 
     /** Basic validation for required headers */

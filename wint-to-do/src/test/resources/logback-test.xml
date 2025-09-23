@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- File appender with a clear pattern -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <!-- The file will appear in your project root directory -->
+<!--        <file>test-app.log</file>-->
+        <file>target/test-app.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n%throwable</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- Package-specific logger: DEBUG for your exception package -->
+    <!--additivity="false" on the package logger means logs from com.example.winttodo.exception
+    are handled only by the appenders listed for that logger
+    (otherwise, they would go to both that logger and also propagate to the root logger, potentially duplicating). -->
+    <logger name="com.example.winttodo.exception" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <!-- Root logger: mostly WARN logs, for all other packages -->
+    <!-- Only show WARN and above during tests -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>
