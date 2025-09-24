@@ -1,5 +1,6 @@
 package com.example.winttodo.controller;
 
+import com.example.winttodo.dto.TodoFullResponse;
 import com.example.winttodo.dto.TodoRequest;
 import com.example.winttodo.dto.TodoResponse;
 import com.example.winttodo.service.TodoService;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * TodoController class
@@ -121,6 +124,28 @@ public class TodoController {
                 .body(todoPage);
         //return ResponseEntity.ok(todoService.getAll(pageable));
 
+    }
+
+    // getAllTodos without pagination (includes even the archived ones)
+    @GetMapping("/all")
+    ResponseEntity<Iterable<TodoFullResponse>> getAllTodos(
+            @RequestHeader ("X-Request-Id") String requestId,
+            @RequestHeader ("X-Client-Id") String clientId
+    ) {
+        // Log method entry with headers
+        /*logger.info("Entering {}.{}",
+                this.getClass().getSimpleName(),
+                Thread.currentThread().getStackTrace()[1].getMethodName()
+        );*/
+        LogUtils.logMethodEntry(logger, this);
+        // validate headers (basic validation)
+        validateHeaders(requestId, clientId);
+        logger.info("Fetching all todos (including archived)");
+        List<TodoFullResponse> responseList = todoService.getAll();
+        logger.info("Fetched todos count: {}", ((Collection<?>) responseList).size());
+        return ResponseEntity.ok()
+                .header("X-Processed-By", "TodoController")
+                .body(responseList);
     }
 
     /** Basic validation for required headers */

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TodoRepository extends JpaRepository<TodoEntity, Long> {
 
+    // Derived query method to find all non-archived todos with pagination
     Page<TodoEntity> findAllByArchivedFalse(Pageable pageable);
 
 }

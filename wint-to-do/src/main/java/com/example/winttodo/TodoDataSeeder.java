@@ -56,6 +56,15 @@ public class TodoDataSeeder implements CommandLineRunner {
             long assignedUserId = userIds[rand.nextInt(userIds.length)];
             todo.setAssignedUserId(assignedUserId);
 
+            // Set every 3rd task as archived for variety
+            todo.setArchived(i % 3 == 0);
+
+            // Add optional tags to every 2nd task
+            if (i % 2 == 0) {
+                todo.getTags().add("demo");
+                todo.getTags().add("sample");
+            }
+
             todoRepository.save(todo);
 
             logger.info("Inserted demo todo: {}, due {}, assigned to {}", todo.getTitle(), dueDate, assignedUserId);
