@@ -4,6 +4,7 @@ import com.example.winttodo.dto.TodoRequest;
 import com.example.winttodo.dto.TodoResponse;
 import com.example.winttodo.service.TodoService;
 import com.example.winttodo.service.TodoServiceImpl;
+import com.example.winttodo.utils.MockMvcLoggingUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -88,7 +89,7 @@ class TodoControllerTest {
                         .header("X-Client-Id", "test-client-id")
                         .contentType("application/json")
                         .content(requestBody))
-                        .andDo(print()) // <-- THIS logs request and response to the console (System.out)
+                .andDo(print()) // <-- THIS logs request and response to the console (System.out)
                 .andExpect(status().isCreated())    // Assert status 201 Created
                 .andExpect(content().contentType("application/json"))
                 .andExpect(header().exists("X-Processed-By"))
@@ -102,7 +103,7 @@ class TodoControllerTest {
                 .andExpect(jsonPath("$.tags").value((Object) null))
                 .andExpect(jsonPath("$.completed").doesNotExist()) // completed and completedAt are not in the TodoResponse, so they should not exist in the response JSON
                 .andExpect(jsonPath("$.completedAt").doesNotExist());
-                //.andExpect(jsonPath("$.tags").doesNotExist());
+        //.andExpect(jsonPath("$.tags").doesNotExist());
 
         // Example response body:
         // {"id":1,"title":"Test Title","description":"Test Description","completed":false,"completedAt":null,"tags":null}
@@ -145,7 +146,7 @@ class TodoControllerTest {
                                     "history": null
                                 }
                                 """))
-                        .andDo(print())
+                .andDo(print())
                 .andExpect(status().isCreated())    // Assert status 201 Created
                 .andExpect(content().contentType("application/json"))
                 .andExpect(header().exists("X-Processed-By"))
@@ -306,5 +307,58 @@ class TodoControllerTest {
                 .map(name -> name + "=" + mvcResult.getResponse().getHeader(name))
                 .toList());
         logger.info("Body: {}", mvcResult.getResponse().getContentAsString());
+    }
+
+    // This test method is an upgrade version of the above method using the Logging utility class to log the request and response json and headers in a pretty format
+    @Test
+    void should_printPrettyJsonInLogsUsingUtilityMethod_whenCreatingTodo() throws Exception {
+        // Create the request json body and the expected response
+        String requestBody = """
+                {
+                    "title": "Test Title for Logging with Utility",
+                    "description": "Test Description for Logging with Utility",
+                    "dueDate": "2026-10-15"
+                }
+                """;
+        // Create a TodoResponse that will be returned by the mocked service
+        TodoResponse todoResponse = new TodoResponse();
+        todoResponse.setId(4L);
+        todoResponse.setTitle("Test Title for Logging with Utility");
+        todoResponse.setDescription("Test Description for Logging with Utility");
+        todoResponse.setDueDate(LocalDate.of(2026, 10, 15));
+        // Service Mocking using BDD style
+        given(todoService.createTodo(any(TodoRequest.class))).willReturn(todoResponse);
+        // Act & Assert
+        // Use mockMvc to perform a POST request and assert the response
+        MvcResult mvcResult = mockMvc.perform(post("/wint/api/todos")
+                        .contextPath("/wint") // Set context path for testing if you do not have application.properties in src/test/resources otherwise you will face issues with Location Header in the response.
+                        // Add headers and body
+                        .header("X-Request-Id", "test-request-id-4")
+                        .header("X-Client-Id", "test-client-id-4")
+                        .contentType("application/json")
+                        .content(requestBody))
+                .andReturn();
+        // Assert status 201 Created
+        // We are not using andExpect here because we just want to log the request and response
+        assertThat(mvcResult.getResponse().getStatus()).isEqualTo(201);
+        // We will use the mvcResult to log the request and response using our utility method
+        MockMvcLoggingUtils.logRequestAndResponse(logger, "should_printPrettyJsonInLogsUsingUtilityMethod_whenCreatingTodo",
+                "POST", "/wint/api/todos", requestBody, mvcResult);
+
+        // You can check the console or log file to see the pretty printed JSON
+        // Perform the assertions as needed
+        String contentAsString = mvcResult.getResponse().getContentAsString();
+        assertThat(contentAsString).isNotBlank();
+        assertThat(contentAsString).contains("Test Title for Logging with Utility");
+        assertThat(contentAsString).contains("Test Description for Logging with Utility");
+        assertThat(contentAsString).contains("2026-10-15");
+
+
+
+        // Get the header from the response and assert
+        String locationHeader = mvcResult.getResponse().getHeader("Location");
+        assertThat(locationHeader).isEqualTo("http://localhost/wint/api/todos/4");
+
+
     }
 }

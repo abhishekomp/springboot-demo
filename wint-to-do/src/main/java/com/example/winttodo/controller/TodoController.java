@@ -93,7 +93,7 @@ public class TodoController {
 
     // Pagination endpoint
     @GetMapping()
-    ResponseEntity<Page<TodoResponse>> getAllTodos(
+    ResponseEntity<Page<TodoResponse>> getAllTodosPaginated(
             @RequestHeader ("X-Request-Id") String requestId,
             @RequestHeader ("X-Client-Id") String clientId,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -113,7 +113,7 @@ public class TodoController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
 
         // Call service to get paginated todos
-        Page<TodoResponse> todoPage = todoService.getAll(pageable);
+        Page<TodoResponse> todoPage = todoService.findAllByArchivedFalse(pageable);
         logger.info("Fetched {} todos on page {}", todoPage.getNumberOfElements(), todoPage.getNumber());
 
         return ResponseEntity.ok()

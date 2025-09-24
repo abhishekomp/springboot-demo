@@ -46,6 +46,21 @@ public class TodoServiceImpl implements TodoService {
         return toTodoResponseDto(todo);
     }
 
+    // Paginated fetch all todos
+   @Override
+   public Page<TodoResponse> findAllByArchivedFalse(Pageable pageable) {
+         // log entry to createTodo
+         LogUtils.logMethodEntry(logger, this);
+         // fetch paginated data from repository
+         Page<TodoEntity> todoEntityPage = todoRepository.findAllByArchivedFalse(pageable);
+         // convert entity to dto
+         // This map method applies the given function to each element of the Page and returns a new Page with the transformed elements.
+         // The map method is in the Page interface, which is part of the Spring Data Commons library.
+         // It is not a default method in Java's Collection framework.
+         // The map method is particularly useful for converting entities to DTOs in a paginated response.
+         return todoEntityPage.map(this::toTodoResponseDto);
+   }
+
     @Override
     public Page<TodoResponse> getAll(Pageable pageable) {
         // log entry to createTodo
